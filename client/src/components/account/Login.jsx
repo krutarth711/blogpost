@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useState, useContext } from 'react';
 
 import { Box, TextField, Button, styled, Typography } from '@mui/material';
 
 import { API } from '../../service/api';
+import { DataContext } from '../../context/DataProvider';
+
+import { useNavigate } from 'react-router-dom';
 
 const Component = styled(Box)`
     width: 400px;
@@ -62,21 +65,36 @@ const signupInitialValues = {
     password: ''
 }
 
-const Login = () => {
+const loginInitialValues = {
+    username: '',
+    password: ''
+}
+
+const Login = ({ isUserAuthenticated }) => {
     const imageURL = 'https://www.sesta.it/wp-content/uploads/2021/03/logo-blog-sesta-trasparente.png'
 
     const [account, toggleAccount] = useState('signup');
     const [signup, setSignup] = useState(signupInitialValues);
-    const [error, setError] = useState('aa');
+    const [login, setLogin] = useState(loginInitialValues);
+    const [error, setError] = useState('');
+
+    const { setAccount } = useContext(DataContext);
+    const navigate = useNavigate();
 
     const toggleSignup = () => {
         account === 'login' ? toggleAccount('signup') : toggleAccount('login')
     }
 
-    const onInputChange = async(e) => {
+    const onSignupInputChange = async(e) => {
         console.log('fieldname: ', e.target.name);
         console.log('fieldname: ', e.target.value);
         setSignup({ ...signup, [e.target.name]: e.target.value })
+    }
+
+    const onLoginInputChange = async(e) => {
+        console.log('fieldname: ', e.target.name);
+        console.log('fieldname: ', e.target.value);
+        setLogin({...login, [e.target.name]: e.target.value });
     }
 
     const signupUser = async() => {
@@ -90,26 +108,43 @@ const Login = () => {
         }
     }
 
+    const loginUser = async() => {
+        const response = await API.userLogin(login);
+        if(response.isSuccess){
+            setError('');
+            sessionStorage.setItem('accessToken', 'Bearer ' + response.data.accessToken);
+            sessionStorage.setItem('refreshToken', 'Bearer ' + response.data.refreshToken);
+
+            setAccount({ username: response.data.username, name: response.data.name})
+
+            isUserAuthenticated(true);
+
+            navigate('/');
+        } else {
+            setError('Something went wrong! Please try again.');
+        }
+    }
+
     return (
         <Component>
             <Image src={imageURL} alt="login" />
             {
                 account === 'login' ?
                     <Wrapper>
-                        <TextField id="username" onChange={(e) => onInputChange(e)} label="Enter Username" variant="standard" />
-                        <TextField id="password" onChange={(e) => onInputChange(e)} label="Enter Password" variant="standard" type={'password'} />
+                        <TextField id="username" value={login.username} name="username" onChange={(e) => onLoginInputChange(e)} label="Enter Username" variant="standard" />
+                        <TextField id="password" value={login.password} name="password" onChange={(e) => onLoginInputChange(e)} label="Enter Password" variant="standard" type={'password'} />
                         { error && <Error>{error}</Error>}
-                        <LoginButton variant="contained">Login</LoginButton>
+                        <LoginButton variant="contained" onClick={() => loginUser()}>Login</LoginButton>
                         <Text style={{ textAlign: ' center' }}>OR</Text>
                         <SignupButton variant="text" onClick={() => toggleSignup()}>Create an account</SignupButton>
                     </Wrapper>
                     :
                     <Wrapper>
-                        <TextField id="name" name='name' onChange={(e) => onInputChange(e)} label="Enter Name" variant="standard" />
-                        <TextField id="username" name='username' onChange={(e) => onInputChange(e)} label="Enter Username" variant="standard" />
+                        <TextField id="name" name='name' onChange={(e) => onSignupInputChange(e)} label="Enter Name" variant="standard" />
+                        <TextField id="username" name='username' onChange={(e) => onSignupInputChange(e)} label="Enter Username" variant="standard" />
                         <TextField 
                             id="password" 
-                            onChange={(e) => onInputChange(e)} 
+                            onChange={(e) => onSignupInputChange(e)} 
                             label="Enter Password" 
                             variant="standard" 
                             type={'password'} 
